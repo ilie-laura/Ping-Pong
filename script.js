@@ -17,8 +17,9 @@ class Ball{
     async preload(){
         await this.asset.decode();
          if (this.size.w === undefined) {
-      this.size.w = this.asset.width;
-      this.size.h = this.asset.height;
+   const scale=0.15;
+this.size.w = this.asset.width * scale;
+this.size.h = this.asset.height * scale;
     }
 }
 onCollide({ x, y }) {
@@ -46,13 +47,18 @@ draw() {
       this.asset,
       this.pos.x - this.size.w / 2,
       this.pos.y - this.size.h / 2,
+        this.size.w,
+    this.size.h,
     );
   }
 }
 
 const ball = new Ball("assets/ball.png", ctx);
 
+
 ball.preload().then(() => requestAnimationFrame(update));
+
+
 
 function update(timestamp){
     const dt = lastTimestamp === null ? 0 : (timestamp - lastTimestamp) / 1000;
@@ -75,6 +81,8 @@ if (x || y) {
   ball.draw();
   requestAnimationFrame(update);
 }
+
+
 function handleWallCollisions(object, width, height) {
   const hitbox = object.hitbox;
   const hittingLeftBoundary = hitbox.left <= 0 && object.vel.x < 0;
