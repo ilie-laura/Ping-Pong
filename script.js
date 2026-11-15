@@ -40,8 +40,8 @@ class GameObject {
 
 class Ball extends GameObject {
   scale = 0.1;
-  pos = { x: 50, y: 50 };
-  vel = { x: 150, y: 150 };
+  pos = { x: undefined, y: undefined };
+  vel = { x: 150, y: -150 };
   move(dt) {
     this.pos.x += this.vel.x * dt;
     this.pos.y += this.vel.y * dt;
@@ -66,9 +66,11 @@ class Paddle extends GameObject {
 const ball = new Ball("assets/ball.png", ctx);
 const paddle = new Paddle("assets/paddle.png", ctx);
 
-Promise.all([ball, paddle].map((obj) => obj.preload())).then(() =>
-  requestAnimationFrame(update),
-);
+Promise.all([ball, paddle].map((obj) => obj.preload())).then(() => {
+  ball.pos.x = paddle.pos.x;
+  ball.pos.y = paddle.hitbox.top - ball.size.h / 2;
+  requestAnimationFrame(update);
+});
 
 
 ball.preload().then(() => requestAnimationFrame(update));
