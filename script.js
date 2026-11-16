@@ -202,6 +202,7 @@ class Paddle extends GameObject {
   }
    onCollide() {
     ball.playWobble();
+     ball.vel.x = -5 * (this.pos.x - ball.pos.x);
   }
 }
 const ball = new Ball("assets/wobble.png", ctx);
