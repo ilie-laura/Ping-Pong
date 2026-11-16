@@ -79,9 +79,14 @@ class Brick extends GameObject {
     this.pos = { x, y };
     this.size = { w, h };
   }
+  
   draw() {
     const { left, top } = this.hitbox;
     this.ctx.drawImage(this.asset, left, top, this.size.w, this.size.h);
+  }
+  onCollide() {
+    bricks.splice(bricks.indexOf(this), 1);
+    colliders.splice(colliders.indexOf(this), 1);
   }
 }
 
@@ -124,7 +129,6 @@ function initBricks() {
 }
 
 const bricks = initBricks();
-
 function update(timestamp){
     const dt = lastTimestamp === null ? 0 : (timestamp - lastTimestamp) / 1000;
     lastTimestamp = timestamp;
@@ -164,6 +168,9 @@ const colliders = [
   { hitbox: { ...baseWallHitbox, bottom: 0 } },
 ];
 colliders.push(paddle);
+for (const brick of bricks) {
+  colliders.push(brick);
+}
 
 Promise.all([ball, paddle, ...bricks].map((obj) => obj.preload())).then(() => {
   ball.pos.x = paddle.pos.x;
