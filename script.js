@@ -2,6 +2,17 @@ const canvas=document.getElementById('game-canvas');
 const ctx = canvas.getContext("2d");
 
 let lastTimestamp = null;
+let score = 0;
+
+function drawScore() {
+  ctx.font = "18px Arial";
+  ctx.fillStyle = "#0095dd";
+  ctx.textBaseline = "top";
+  ctx.textAlign = "left";
+  ctx.fillText(`Points: ${score}`, 5, 5);
+}
+
+
 class GameObject {
   static assets = new Map();
   ctx;
@@ -87,6 +98,7 @@ class Brick extends GameObject {
   onCollide() {
     bricks.splice(bricks.indexOf(this), 1);
     colliders.splice(colliders.indexOf(this), 1);
+     score += 10;
   }
 }
 
@@ -153,6 +165,7 @@ moveBall(dt);
   for (const brick of bricks) {
     brick.draw();
   }
+    drawScore();
   requestAnimationFrame(update);
 }
 const baseWallHitbox = {
