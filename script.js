@@ -5,6 +5,8 @@ let lastTimestamp = null;
 let score = 0;
 let lives = 3;
 let showLifeLostText = false;
+const disappearingBricks = [];
+
 
 function drawScore() {
   ctx.font = "18px Arial";
@@ -104,9 +106,16 @@ class GameObject {
 }
 
 class Ball extends GameObject {
-  scale = 0.1;
+  scale = 0.3;
   pos = { x: undefined, y: undefined };
+  wobbleFrames = [0, 1, 0, 2, 0, 1, 0, 2, 0];
+  wobbleTime = null;
   vel = { x: 150, y: -150 };
+  async preload() {
+    await super.preload();
+    this.size.w = (this.asset.width / 3) * this.scale;
+    this.size.h = this.asset.height * this.scale;
+  }
   move(dt) {
     this.pos.x += this.vel.x * dt;
     this.pos.y += this.vel.y * dt;
@@ -119,6 +128,37 @@ class Ball extends GameObject {
       this.vel.y = -this.vel.y;
     }
   }
+  playWobble() {
+    this.wobbleTime = 0;
+  }
+  updateAnimation(dt) {
+    if (this.wobbleTime === null) {
+      return;
+    }
+    this.wobbleTime += dt;
+    if (this.wobbleTime >= this.wobbleFrames.length * (1 / 24)) {
+      this.wobbleTime = null;
+    }
+  }
+  draw() {
+    const frameWidth = this.asset.width / 3;
+    const frame =
+      this.wobbleTime === null
+        ? 0
+        : this.wobbleFrames[Math.floor(this.wobbleTime / (1 / 24))];
+    const { left, top } = this.hitbox;
+    this.ctx.drawImage(
+      this.asset,
+      frame * frameWidth,
+      0,
+      frameWidth,
+      this.asset.height,
+      left,
+      top,
+      this.size.w,
+      this.size.h,
+    );
+  }
 }
 
 class Paddle extends GameObject {
@@ -127,11 +167,15 @@ class Paddle extends GameObject {
     super(url, ctx);
     this.pos = { x: ctx.canvas.width / 2, y: ctx.canvas.height - 5 };
   }
+   onCollide() {
+    ball.playWobble();
+  }
 }
-const ball = new Ball("assets/ball.png", ctx);
+const ball = new Ball("assets/wobble.png", ctx);
 const paddle = new Paddle("assets/paddle.png", ctx);
 
 class Brick extends GameObject {
+   shrinkTime = 0;
   constructor(url, ctx, x, y, w, h) {
     super(url, ctx);
     this.pos = { x, y };
@@ -139,13 +183,22 @@ class Brick extends GameObject {
   }
   
   draw() {
-    const { left, top } = this.hitbox;
-    this.ctx.drawImage(this.asset, left, top, this.size.w, this.size.h);
+    const scale = 1 - Math.min(this.shrinkTime / 0.2, 1);
+    const width = this.size.w * scale;
+    const height = this.size.h * scale;
+    this.ctx.drawImage(
+      this.asset,
+      this.pos.x - width / 2,
+      this.pos.y - height / 2,
+      width,
+      height,
+    );
   }
-  onCollide() {
+   onCollide() {
     bricks.splice(bricks.indexOf(this), 1);
     colliders.splice(colliders.indexOf(this), 1);
-     score += 10;
+    disappearingBricks.push(this);
+    score += 10;
   }
 }
 
@@ -188,35 +241,39 @@ function initBricks() {
 }
 
 const bricks = initBricks();
-function update(timestamp){
-    const dt = lastTimestamp === null ? 0 : (timestamp - lastTimestamp) / 1000;
-    lastTimestamp = timestamp;
-    const hittingLeftBoundary = ball.pos.x - ball.size.w / 2 <= 0 && ball.vel.x < 0;
-const hittingRightBoundary = ball.pos.x + ball.size.w / 2 >= canvas.width && ball.vel.x > 0;
-const hittingTopBoundary = ball.pos.y - ball.size.h / 2 <= 0 && ball.vel.y < 0;
+function update(timestamp) {
+  const dt = lastTimestamp === null ? 0 : (timestamp - lastTimestamp) / 1000;
+  lastTimestamp = timestamp;
 
-    const x = hittingLeftBoundary || hittingRightBoundary;
-    const y = hittingTopBoundary;
-if (x || y) {
-  ball.onCollide({ x, y });
-}
-    
-lastTimestamp = timestamp;
-moveBall(dt);
+  ball.updateAnimation(dt);
+  for (let i = disappearingBricks.length - 1; i >= 0; i--) {
+    const brick = disappearingBricks[i];
+    brick.shrinkTime += dt;
+    if (brick.shrinkTime >= 0.2) {
+      disappearingBricks.splice(i, 1);
+    }
+  }
+
+  moveBall(dt);
   ctx.fillStyle = "#eeeeee";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
+
   ball.draw();
   paddle.draw();
   for (const brick of bricks) {
     brick.draw();
   }
+  for (const brick of disappearingBricks) {
+    brick.draw();
+  }
   drawStatus();
-    if (bricks.length === 0) {
-  alert("You won the game!");
-  location.reload();
-  return;
-}
+
+  if (bricks.length === 0 && disappearingBricks.length === 0) {
+    alert("You won the game, congratulations!");
+    location.reload();
+    return;
+  }
+
   requestAnimationFrame(update);
 }
 const baseWallHitbox = {
