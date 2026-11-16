@@ -326,6 +326,11 @@
           #eaf8ff;
       }
 
+      .canvas-stage {
+        position: relative;
+        width: min(100%, 640px);
+      }
+
       canvas {
         display: block;
         width: 100%;
@@ -335,6 +340,81 @@
         border-radius: 11px;
         box-shadow: 0 5px 14px #4e9fbe20;
         touch-action: none;
+      }
+
+      .win-overlay {
+        position: absolute;
+        z-index: 1;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 14px;
+        border-radius: 11px;
+        background: #31536a99;
+        backdrop-filter: blur(3px);
+      }
+
+      .win-overlay[hidden] {
+        display: none;
+      }
+
+      .win-card {
+        width: min(100%, 340px);
+        padding: 22px 18px;
+        border: 2px solid #bdeaff;
+        border-radius: 22px;
+        background: #ffffff;
+        box-shadow: 0 6px 0 #bdeaff;
+        text-align: center;
+      }
+
+      .win-fireworks {
+        margin-bottom: 5px;
+        font-size: 2.2rem;
+        animation: fireworks-pulse 700ms ease-in-out infinite alternate;
+      }
+
+      .win-card h2 {
+        margin-bottom: 8px;
+        color: var(--blue);
+        font-size: clamp(1.45rem, 4vw, 1.8rem);
+      }
+
+      .win-card p {
+        margin-bottom: 18px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .win-restart {
+        min-height: 44px;
+        padding: 10px 18px;
+        border: 2px solid #1687b8;
+        border-radius: 14px;
+        background: #53bde2;
+        box-shadow: 0 4px 0 #1687b8;
+        color: white;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 900;
+        transition:
+          transform 150ms ease,
+          box-shadow 150ms ease;
+      }
+
+      .win-restart:hover {
+        transform: translateY(2px);
+        box-shadow: 0 2px 0 #1687b8;
+      }
+
+      @keyframes fireworks-pulse {
+        from {
+          transform: scale(0.94) rotate(-4deg);
+        }
+
+        to {
+          transform: scale(1.08) rotate(4deg);
+        }
       }
 
       .game-caption {
@@ -623,7 +703,8 @@
 
       @media (hover: none) and (pointer: coarse) {
         .nav-links a,
-        .primary-link {
+        .primary-link,
+        .win-restart {
           min-height: 44px;
         }
 
@@ -660,6 +741,11 @@
         *::after {
           scroll-behavior: auto !important;
           transition-duration: 0.01ms !important;
+        }
+
+        .win-fireworks {
+          animation-duration: 0.01ms;
+          animation-iteration-count: 1;
         }
       }
     </style>
@@ -704,14 +790,33 @@
             <span class="game-badge">1 PLAYER</span>
           </div>
           <div class="canvas-shell">
-            <canvas
-              id="game-canvas"
-              width="480"
-              height="320"
-              aria-label="Jocul Sky Pong. Apasă butonul START pentru a începe."
-            >
-              Browserul tău nu poate afișa jocul.
-            </canvas>
+            <div class="canvas-stage">
+              <canvas
+                id="game-canvas"
+                width="480"
+                height="320"
+                aria-label="Jocul Sky Pong. Apasă butonul START pentru a începe."
+              >
+                Browserul tău nu poate afișa jocul.
+              </canvas>
+              <div
+                class="win-overlay"
+                id="win-overlay"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="win-title"
+                hidden
+              >
+                <div class="win-card">
+                  <div class="win-fireworks" aria-hidden="true">🎆  🎇</div>
+                  <h2 id="win-title">Ai câștigat!</h2>
+                  <p>Ai spart toate cărămizile. Bravo!</p>
+                  <button class="win-restart" id="restart-game" type="button">
+                    Joacă din nou
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
           <div class="game-caption">
             <span>gata de joacă</span>

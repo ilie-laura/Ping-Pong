@@ -1,5 +1,7 @@
 const canvas=document.getElementById('game-canvas');
 const ctx = canvas.getContext("2d");
+const winOverlay = document.getElementById("win-overlay");
+const restartGameButton = document.getElementById("restart-game");
 
 let lastTimestamp = null;
 let score = 0;
@@ -9,6 +11,8 @@ const disappearingBricks = [];
 let playing = false;
 const buttonControls = new AbortController();
 let pressedPointer = null;
+
+restartGameButton.addEventListener("click", () => location.reload());
 
 function drawScore() {
   ctx.font = "18px Arial";
@@ -308,8 +312,9 @@ function update(timestamp) {
   drawStatus();
 
   if (playing && bricks.length === 0 && disappearingBricks.length === 0) {
-    alert("You won the game, congratulations!");
-    location.reload();
+    playing = false;
+    winOverlay.hidden = false;
+    restartGameButton.focus();
     return;
   }
 
