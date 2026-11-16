@@ -6,7 +6,9 @@ let score = 0;
 let lives = 3;
 let showLifeLostText = false;
 const disappearingBricks = [];
-
+let playing = false;
+const buttonControls = new AbortController();
+let pressedPointer = null;
 
 function drawScore() {
   ctx.font = "18px Arial";
@@ -104,7 +106,38 @@ class GameObject {
   }
   onCollide() {}
 }
-
+class Button extends GameObject {
+  size = { w: 120, h: 40 };
+  frame = 0;
+  constructor(url, ctx) {
+    super(url, ctx);
+    this.pos = { x: ctx.canvas.width / 2, y: ctx.canvas.height / 2 };
+  }
+   draw() {
+    const columns = Math.floor(this.asset.width / this.size.w);
+    const { left, top } = this.hitbox;
+    this.ctx.drawImage(
+      this.asset,
+      (this.frame % columns) * this.size.w,
+      Math.floor(this.frame / columns) * this.size.h,
+      this.size.w,
+      this.size.h,
+      left,
+      top,
+      this.size.w,
+      this.size.h,
+    );
+  }
+  containsPointer(event) {
+    const bounds = this.ctx.canvas.getBoundingClientRect();
+    const x =
+      ((event.clientX - bounds.left) * this.ctx.canvas.width) / bounds.width;
+    const y =
+      ((event.clientY - bounds.top) * this.ctx.canvas.height) / bounds.height;
+    const { left, right, top, bottom } = this.hitbox;
+    return x >= left && x <= right && y >= top && y <= bottom;
+  }
+}
 class Ball extends GameObject {
   scale = 0.3;
   pos = { x: undefined, y: undefined };
@@ -173,7 +206,7 @@ class Paddle extends GameObject {
 }
 const ball = new Ball("assets/wobble.png", ctx);
 const paddle = new Paddle("assets/paddle.png", ctx);
-
+const startButton = new Button("assets/button.png", ctx);
 class Brick extends GameObject {
    shrinkTime = 0;
   constructor(url, ctx, x, y, w, h) {
@@ -245,16 +278,18 @@ function update(timestamp) {
   const dt = lastTimestamp === null ? 0 : (timestamp - lastTimestamp) / 1000;
   lastTimestamp = timestamp;
 
-  ball.updateAnimation(dt);
-  for (let i = disappearingBricks.length - 1; i >= 0; i--) {
-    const brick = disappearingBricks[i];
-    brick.shrinkTime += dt;
-    if (brick.shrinkTime >= 0.2) {
-      disappearingBricks.splice(i, 1);
+  if (playing) {
+    ball.updateAnimation(dt);
+    for (let i = disappearingBricks.length - 1; i >= 0; i--) {
+      const brick = disappearingBricks[i];
+      brick.shrinkTime += dt;
+      if (brick.shrinkTime >= 0.2) {
+        disappearingBricks.splice(i, 1);
+      }
     }
+    moveBall(dt);
   }
 
-  moveBall(dt);
   ctx.fillStyle = "#eeeeee";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -266,9 +301,12 @@ function update(timestamp) {
   for (const brick of disappearingBricks) {
     brick.draw();
   }
+  if (!playing) {
+    startButton.draw();
+  }
   drawStatus();
 
-  if (bricks.length === 0 && disappearingBricks.length === 0) {
+  if (playing && bricks.length === 0 && disappearingBricks.length === 0) {
     alert("You won the game, congratulations!");
     location.reload();
     return;
@@ -293,12 +331,20 @@ for (const brick of bricks) {
   colliders.push(brick);
 }
 
-Promise.all([ball, paddle, ...bricks].map((obj) => obj.preload())).then(() => {
+Promise.all(
+  [ball, paddle, ...bricks, startButton].map((obj) => obj.preload()),
+).then(() => {
   ball.pos.x = paddle.pos.x;
   ball.pos.y = paddle.hitbox.top - ball.size.h / 2;
+  initButtonControls();
   requestAnimationFrame(update);
 });
-
+function startGame() {
+  buttonControls.abort();
+  ball.vel = { x: 150, y: -150 };
+  playing = true;
+  lastTimestamp = null;
+}
 function moveBall(dt) {
   while (dt > 0 && bricks.length > 0)  {
     // Avoid repeatedly triggering the getter
@@ -391,7 +437,7 @@ function getCollision(moving, velocity, obstacle, dt) {
 }
 
 canvas.addEventListener("pointermove", (event) => {
-  if (paddle.size.w === undefined) {
+  if (!playing || paddle.size.w === undefined) {
     return;
   }
   const bounds = canvas.getBoundingClientRect();
@@ -401,3 +447,73 @@ canvas.addEventListener("pointermove", (event) => {
     Math.min(canvas.width - paddle.size.w / 2, x),
   );
 });
+
+
+function initButtonControls() {
+  const options = { signal: buttonControls.signal };
+
+  function resetFrame(event) {
+    if (pressedPointer === null || pressedPointer === event.pointerId) {
+      startButton.frame = 0;
+    }
+  }
+
+  function cancelPress(event) {
+    if (event.pointerId === pressedPointer) {
+      pressedPointer = null;
+      resetFrame(event);
+    }
+  }
+
+  canvas.addEventListener(
+    "pointermove",
+    (event) => {
+      if (pressedPointer !== null && pressedPointer !== event.pointerId) {
+        return;
+      }
+      if (startButton.containsPointer(event)) {
+        startButton.frame = pressedPointer === null ? 1 : 2;
+      } else {
+        resetFrame(event);
+      }
+    },
+    options,
+  );
+
+  canvas.addEventListener(
+    "pointerdown",
+    (event) => {
+      if (
+        event.button !== 0 ||
+        pressedPointer !== null ||
+        !startButton.containsPointer(event)
+      ) {
+        return;
+      }
+      pressedPointer = event.pointerId;
+      startButton.frame = 2;
+      canvas.setPointerCapture(event.pointerId);
+    },
+    options,
+  );
+
+  canvas.addEventListener(
+    "pointerup",
+    (event) => {
+      if (event.pointerId !== pressedPointer) {
+        return;
+      }
+      if (startButton.containsPointer(event)) {
+        pressedPointer = null;
+        startGame();
+      } else {
+        cancelPress(event);
+      }
+    },
+    options,
+  );
+
+  canvas.addEventListener("pointerleave", resetFrame, options);
+  canvas.addEventListener("pointercancel", cancelPress, options);
+  canvas.addEventListener("lostpointercapture", cancelPress, options);
+}
