@@ -166,6 +166,11 @@ moveBall(dt);
     brick.draw();
   }
     drawScore();
+    if (bricks.length === 0) {
+  alert("You won the game!");
+  location.reload();
+  return;
+}
   requestAnimationFrame(update);
 }
 const baseWallHitbox = {
@@ -192,7 +197,7 @@ Promise.all([ball, paddle, ...bricks].map((obj) => obj.preload())).then(() => {
 });
 
 function moveBall(dt) {
-  while (dt > 0) {
+  while (dt > 0 && bricks.length > 0)  {
     // Avoid repeatedly triggering the getter
     const ballHitbox = ball.hitbox;
     let hitTime = dt;
