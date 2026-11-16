@@ -291,7 +291,7 @@ function update(timestamp) {
     moveBall(dt);
   }
 
-  ctx.fillStyle = "#eeeeee";
+  ctx.fillStyle = "#eaf8ff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ball.draw();
