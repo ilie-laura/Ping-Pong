@@ -3,6 +3,8 @@ const ctx = canvas.getContext("2d");
 
 let lastTimestamp = null;
 let score = 0;
+let lives = 3;
+let showLifeLostText = false;
 
 function drawScore() {
   ctx.font = "18px Arial";
@@ -11,6 +13,51 @@ function drawScore() {
   ctx.textAlign = "left";
   ctx.fillText(`Points: ${score}`, 5, 5);
 }
+function drawStatus() {
+  ctx.font = "18px Arial";
+  ctx.fillStyle = "#0095dd";
+  ctx.textBaseline = "top";
+  ctx.textAlign = "left";
+  ctx.fillText(`Points: ${score}`, 5, 5);
+
+  ctx.textAlign = "right";
+  ctx.fillText(`Lives: ${lives}`, canvas.width - 5, 5);
+
+  if (showLifeLostText) {
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(
+      lives <= 0 ? "Game over, click to restart" : "Life lost, click to continue",
+      canvas.width / 2,
+      canvas.height / 2,
+    );
+  }
+}
+
+
+function ballLeaveScreen() {
+  lives--;
+  score = 0;
+
+  paddle.pos.x = canvas.width / 2;
+  ball.pos.x = paddle.pos.x;
+  ball.pos.y = paddle.hitbox.top - ball.size.h / 2;
+  ball.vel = { x: 0, y: 0 };
+  showLifeLostText = true;
+  canvas.addEventListener(
+    "pointerdown",
+    () => {
+      if (lives <= 0) {
+        lives = 3;
+      }
+      showLifeLostText = false;
+      ball.vel = { x: 150, y: -150 };
+      lastTimestamp = null;
+    },
+    { once: true },
+  );
+}
+
 
 
 class GameObject {
@@ -147,10 +194,9 @@ function update(timestamp){
     const hittingLeftBoundary = ball.pos.x - ball.size.w / 2 <= 0 && ball.vel.x < 0;
 const hittingRightBoundary = ball.pos.x + ball.size.w / 2 >= canvas.width && ball.vel.x > 0;
 const hittingTopBoundary = ball.pos.y - ball.size.h / 2 <= 0 && ball.vel.y < 0;
-const hittingBottomBoundary = ball.pos.y + ball.size.h / 2 >= canvas.height && ball.vel.y > 0;
 
     const x = hittingLeftBoundary || hittingRightBoundary;
-const y = hittingTopBoundary || hittingBottomBoundary;
+    const y = hittingTopBoundary;
 if (x || y) {
   ball.onCollide({ x, y });
 }
@@ -165,7 +211,7 @@ moveBall(dt);
   for (const brick of bricks) {
     brick.draw();
   }
-    drawScore();
+  drawStatus();
     if (bricks.length === 0) {
   alert("You won the game!");
   location.reload();
@@ -225,12 +271,10 @@ function moveBall(dt) {
     dt -= hitTime;
 
     const ballIsOutOfBounds = ball.hitbox.bottom > canvas.height;
-if (ballIsOutOfBounds) {
-  // Game over logic
-  alert("Game over!");
-  location.reload();
-  return;
-}
+    if (ballIsOutOfBounds) {
+      ballLeaveScreen();
+      return;
+    }
 
     if (contacts.length === 0) {
       break;
